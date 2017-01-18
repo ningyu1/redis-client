@@ -18,13 +18,14 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import cn.tsoft.framework.redis.callback.CallBack;
+
 import redis.clients.jedis.BinaryClient.LIST_POSITION;
 import redis.clients.jedis.BitPosParams;
 import redis.clients.jedis.GeoCoordinate;
 import redis.clients.jedis.GeoRadiusResponse;
 import redis.clients.jedis.GeoUnit;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.ScanParams;
 import redis.clients.jedis.ScanResult;
 import redis.clients.jedis.SortingParams;
@@ -38,9 +39,9 @@ import redis.clients.jedis.params.sortedset.ZIncrByParams;
  * @author ningyu
  * @date 2017年1月16日 下午2:54:36
  */
-public class RedisClient extends BaseClient implements JedisCommands {
+public class RedisClientImpl extends BaseClient implements RedisClient {
 	
-	private final Logger logger = LoggerFactory.getLogger(RedisClient.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(RedisClientImpl.class.getName());
 	
 	/**
 	   * Set the string value as value of the key. The string can't be longer than 1073741824 bytes (1
