@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Jiuye SCM and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Tsoft and/or its affiliates. All rights reserved.
  * FileName: AdviceFilter.java
  * Author:   ningyu
  * Date:     2016年12月30日
