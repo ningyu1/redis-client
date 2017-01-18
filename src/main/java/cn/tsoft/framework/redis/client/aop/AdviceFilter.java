@@ -8,7 +8,7 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client.apo;
+package cn.tsoft.framework.redis.client.aop;
 
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
