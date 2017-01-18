@@ -21,6 +21,7 @@
 		<property name="maxIdle" value="${redis.pool.maxIdle}" />
 		<property name="minIdle" value="${redis.pool.minIdle}" />
 		<property name="testOnBorrow" value="${redis.pool.testOnBorrow}" />
+		<property name="testOnReturn" value="${redis.pool.testOnReturn}" />
 	</bean>
 
 	<bean id="jedisPool" class="redis.clients.jedis.JedisPool">
