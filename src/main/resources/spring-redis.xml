@@ -12,6 +12,8 @@
 	<aop:aspectj-autoproxy />
 	<context:component-scan base-package="cn.tsoft.framework.redis" />
 	
+<!-- 	<context:property-placeholder location="classpath:redis.properties"/> -->
+	
 	<bean id="redisClient" class="cn.tsoft.framework.redis.client.RedisClientImpl">
 		<property name="jedisPool" ref="jedisPool" />
 	</bean>
