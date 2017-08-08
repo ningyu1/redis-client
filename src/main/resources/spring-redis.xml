@@ -12,9 +12,7 @@
 	<aop:aspectj-autoproxy />
 	<context:component-scan base-package="cn.tsoft.framework.redis" />
 	
-<!-- 	<context:property-placeholder location="classpath:redis.properties"/> -->
-	
-	<bean id="redisClient" class="cn.tsoft.framework.redis.client.RedisClientImpl">
+	<bean id="redisClient" class="cn.tsoft.framework.redis.client.impl.RedisClientImpl">
 		<property name="jedisPool" ref="jedisPool" />
 	</bean>
 
@@ -32,19 +30,6 @@
 		<constructor-arg index="2" value="${redis.port}" />
 		<constructor-arg index="3" value="${redis.timeout}" />
 		<constructor-arg index="4" value="${redis.password}" />
-	</bean>
-
-	<bean id="shardedJedisPool" class="redis.clients.jedis.ShardedJedisPool">
-		<constructor-arg index="0" ref="jedisPoolConfig" />
-		<constructor-arg index="1">
-			<list>
-				<bean class="redis.clients.jedis.JedisShardInfo">
-					<constructor-arg index="0" value="${redis.ip}" />
-					<constructor-arg index="1" value="${redis.port}"
-						type="int" />
-				</bean>
-			</list>
-		</constructor-arg>
 	</bean>
 
 </beans>

@@ -8,46 +8,44 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client;
+package cn.tsoft.framework.redis.client.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cn.tsoft.framework.redis.callback.CallBack;
-
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.exceptions.JedisException;
+
+import cn.tsoft.framework.redis.callback.CallBack;
 
 /**
  * 
  * @author ningyu
  * @date 2017年1月16日 下午3:01:10
  */
-public abstract class BaseClient {
-	
-	private final Logger logger = LoggerFactory.getLogger(BaseClient.class.getName());
+public class DefaultClientImpl {
 
-	private JedisPool jedisPool;
-	
-	public void setJedisPool(JedisPool jedisPool) {
-		this.jedisPool = jedisPool;
-	}
+    private final Logger logger = LoggerFactory.getLogger(DefaultClientImpl.class.getName());
 
-	protected <T> T executeCache(CallBack<T> callback) {
-		Jedis jedis = null;
-		try {
-			jedis = jedisPool.getResource();
+    private JedisPool jedisPool;
+
+    public void setJedisPool(JedisPool jedisPool) {
+        this.jedisPool = jedisPool;
+    }
+
+    protected <T> T execute(CallBack<T> callback) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
             return callback.invoke(jedis);
         } catch (JedisException e) {
             logger.error("jedis pool get resource error:{}", e);
         } finally {
             if (null != jedis) {
-            	jedis.close();
+                jedis.close();
             }
         }
-		return null;
-	}
+        return null;
+    }
 }
-
-

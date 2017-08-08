@@ -14,7 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Component;
 
-import cn.tsoft.framework.redis.client.RedisClient;
+import redis.clients.jedis.Pipeline;
+
+import cn.tsoft.framework.redis.client.IRedisClient;
 
 /**
  * <功能描述>
@@ -25,14 +27,26 @@ import cn.tsoft.framework.redis.client.RedisClient;
 public class RedisClientTest {
 	
 	@Autowired
-	public RedisClient redisClient;
+	public IRedisClient redisClient;
 
 	public static void main(String[] args) {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("spring-context.xml");
 		RedisClientTest redisTest = (RedisClientTest) context.getBean("redisClientTest");
-		redisTest.redisClient.setex("testeaaaaa", 100, "sdflkjsdf");
+//		redisTest.redisClient.setex("testeaaaaa", 100, "sdflkjsdf");
+//		redisTest.redisClient.setnx("test1111a", "sdflkjsdf");
+//		System.out.println(redisTest.redisClient.get("testeaaaaa"));
+//		redisTest.redisClient.hset("hsetkey", "hsetattr", "value");
+//		System.out.println(redisTest.redisClient.hget("hsetkey", "hsetattr"));
+//		redisTest.redisClient.set("testaaaa", "namespace", "testaaaa", -1);
+//		redisTest.redisClient.set("testaaaa", "namespace", "testaaaa111", -1);
+//		redisTest.redisClient.set("testbbbb", "namespace", "testaaaa", -1);
+//		redisTest.redisClient.setnx("testbbbb", "namespace", "testaaaa");
+//		redisTest.redisClient.setex("testex", "namespace", 60, "testex");
+//		Long ttl = redisTest.redisClient.ttl("testex", "namespace");
+//		System.out.println(ttl);
+//		redisTest.redisClient.patternDel("test*","namespace");
+//		Pipeline p = redisTest.redisClient.pipelined();
 		
-		System.out.println(redisTest.redisClient.get("testeaaaaa"));
 	}
 }
 

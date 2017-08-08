@@ -31,7 +31,7 @@ public class AdviceFilter {
     
     private static String RN = "\r\n";
 
-	@Around("execution(* cn.tsoft.framework.redis.client.RedisClientImpl.*(..))")
+	@Around("execution(* cn.tsoft.framework.redis.client.impl.RedisClientImpl.*(..))")
     public Object process(ProceedingJoinPoint point) throws Throwable {
 		Object[] args = point.getArgs();
 		long begin = System.nanoTime();
