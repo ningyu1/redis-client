@@ -4,7 +4,7 @@
 ### 1. pom中添加依赖
 ``` xml
 <dependency>
-  <groupId>com.jiuyescm.framework</groupId>
+  <groupId>cn.tsoft.framework</groupId>
   <artifactId>redis-client</artifactId>
   <version>1.0.0-SNAPSHOT</version>
 </dependency>
@@ -46,14 +46,14 @@ redisClient.get("key");
 
 ### 7. monitor日志查看（debug）
 ```
-2017-01-18 13:53:48.512 [main] DEBUG c.jiuyescm.framework.redis.client.aop.AdviceFilter - function: String redis.clients.jedis.JedisCommands.setex(String,int,String)
+2017-01-18 13:53:48.512 [main] DEBUG c.tsoft.framework.redis.client.aop.AdviceFilter - function: String redis.clients.jedis.JedisCommands.setex(String,int,String)
 key: testeaaaaa
 key type: String
 key size: 10
 return value type: String
 return value size: 2
 last: 40ms
-2017-01-18 13:53:48.519 [main] DEBUG c.jiuyescm.framework.redis.client.aop.AdviceFilter - function: String redis.clients.jedis.JedisCommands.get(String)
+2017-01-18 13:53:48.519 [main] DEBUG c.tsoft.framework.redis.client.aop.AdviceFilter - function: String redis.clients.jedis.JedisCommands.get(String)
 key: testeaaaaa
 key type: String
 key size: 10
