@@ -47,7 +47,7 @@ public IRedisClient redisClient;
 ### 6. 回调接口
 
 接口提供两个方法
-`com.jiuyescm.framework.redis.callback.GetDataCallBack<R>`
+`cn.tsoft.framework.redis.callback.GetDataCallBack<R>`
 
 ``` java
 /**
