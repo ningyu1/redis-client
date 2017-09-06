@@ -1,6 +1,8 @@
 # redis-client
 访问redis的java客户端，在jedis基础上包装，从coding方面优化使用方式，增加namespace支持，可以根据项目或者产品做数据隔离
 
+具体查看：https://ningyu1.github.io/site/post/22-redis-client/
+
 ### 1. pom中添加依赖
 ``` xml
 <dependency>
