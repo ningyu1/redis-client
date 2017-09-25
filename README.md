@@ -265,7 +265,7 @@ xml配置跟以前`pool`的配置方式有所不同，单节点`redis`的`pool`�
 <import resource="classpath:spring-redis-sentinel.xml" />
 ```
 
-**ps.替换掉以前的：<import resource="classpath:spring-redis.xml" />**
+**ps.替换掉以前的：`<import resource="classpath:spring-redis.xml" />`**
 
 ## 5. 注意事项
 
