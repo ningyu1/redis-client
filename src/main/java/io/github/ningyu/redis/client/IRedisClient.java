@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017, Tsoft and/or its affiliates. All rights reserved.
- * FileName: RedisClientImpl.java
+ * FileName: IRedisClient.java
  * Author:   ningyu
  * Date:     2017年4月24日
  * Description: //模块目的、功能描述      
@@ -8,123 +8,66 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client.impl;
+package io.github.ningyu.redis.client;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import io.github.ningyu.redis.callback.GetDataCallBack;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import redis.clients.jedis.BinaryClient.LIST_POSITION;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Pipeline;
-import redis.clients.jedis.ScanParams;
-import redis.clients.jedis.ScanResult;
 import redis.clients.jedis.SortingParams;
 import redis.clients.jedis.Tuple;
+import redis.clients.jedis.BinaryClient.LIST_POSITION;
 
 import com.alibaba.fastjson.TypeReference;
-import cn.tsoft.framework.redis.callback.CallBack;
-import cn.tsoft.framework.redis.callback.GetDataCallBack;
-import cn.tsoft.framework.redis.client.IRedisClient;
-import cn.tsoft.framework.redis.util.CacheUtils;
 
 /**
  * <功能描述>
  * @author ningyu
- * @date 2017年4月24日 上午10:40:21
+ * @date 2017年4月24日 上午10:29:26
  */
 /**
  * @author ningyu
  * 
  */
-public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
-
-    /**
-     * 日志记录
-     */
-    private static Logger logger = LoggerFactory.getLogger(RedisClientImpl.class);
-
-    public RedisClientImpl() {
-    }
-
-    /**
-     * 
-     * @param key
-     *            key value
-     * @param callBack
-     *            回调方法
-     * @param <R>
-     *            泛型对象
-     * @return 结果集合
-     */
-    protected <R> R performFunction(String entrykey, CallBack<R> callBack) {
-        return execute(callBack);
-    }
+public interface IRedisClient {
 
     /**
      * @param key
      *            主键
+     * @param nameSpace
+     *            命名空间
      * @param value
      *            值
-     * @param time
-     *            seconds
-     * @return Bulk reply
+     * @param expire
+     *            seconds, -1表示无时间限制
+     * @return Status code reply
      */
-    @Override
-    public String set(final String bizkey, final String nameSpace, final String value, final int time) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        // 避免setex和setnx问题
-        String res = this.performFunction(key, new CallBack<String>() {
-            // set
-            public String invoke(Jedis jedis) {
-                // 代码合并，避免多次调用，走不同代理有时间差的问题
-                String res = jedis.set(key, value);
-                // 如果没有设置时间或者为负数，则不设置超时时间
-                if (time > 0) {
-                    Long resLong = jedis.expire(key, time);
-                    if (resLong != 1) {
-                        logger.error("key:" + key + "expire exception!!!");
-                    }
-                }
-                return res;
-            }
-        });
-        return res;
-    }
+
+    public String set(final String bizkey, final String nameSpace, final String value, final int expire);
 
     /**
      * Set the string value as value of the key. The string can't be longer than
      * 1073741824 bytes (1 GB).
      * 
-     * @param key
+     * @param bizkey
+     * @param nameSpace
      * @param value
      * @param nxxx
      *            NX|XX, NX -- Only set the key if it does not already exist. XX
      *            -- Only set the key if it already exist.
      * @param expx
      *            EX|PX, expire time units: EX = seconds; PX = milliseconds
-     * @param time
+     * @param expire
      *            expire time in the units of {@param #expx}
      * @return Status code reply
      */
-    @Override
+
     public String set(final String bizkey, final String nameSpace, final String value, final String nxxx,
-            final String expx, final long time) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.set(key, value, nxxx, expx, time);
-            }
-        });
-    }
+            final String expx, final long expire);
 
     /**
      * Get the value of the specified key. If the key does not exist the special
@@ -133,28 +76,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public String get(final String bizkey, final String nameSpace, final GetDataCallBack<String> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                String res = jedis.get(key);
-                if (StringUtils.isEmpty(res)) {
-                    if (null != gbs) {
-                        res = gbs.invoke();
-                        if (StringUtils.isNotEmpty(res)) {
-                            set(bizkey, nameSpace, res, "NX", "EX", gbs.getExpiredTime());
-                        }
-                    }
-                }
-                return res;
-            }
-        });
-    }
+
+    public String get(final String bizkey, final String nameSpace, final GetDataCallBack<String> gbs);
 
     /**
      * Test if the specified key exists. The command returns "1" if the key
@@ -163,19 +91,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Boolean reply, true if the key exists, otherwise false
      */
-    @Override
-    public Boolean exists(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.exists(key);
-            }
-        });
-    }
+
+    public Boolean exists(final String bizkey, final String nameSpace);
 
     /**
      * Return the type of the value stored at key in form of a string. The type
@@ -184,23 +106,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Status code reply, specifically: "none" if the key does not exist
      *         "string" if the key contains a String value "list" if the key
      *         contains a List value "set" if the key contains a Set value
      *         "zset" if the key contains a Sorted Set value "hash" if the key
      *         contains a Hash value
      */
-    @Override
-    public String type(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.type(key);
-            }
-        });
-    }
+
+    public String type(final String bizkey, final String nameSpace);
 
     /**
      * Set a timeout on the specified key. After the timeout the key will be
@@ -222,8 +138,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see <ahref="http://code.google.com/p/redis/wiki/ExpireCommand">ExpireCommand</a>
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param seconds
      *            associated timeout
      * @return Integer reply, specifically: 1: the timeout was set. 0: the
@@ -232,15 +149,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *         2.1.3 will happily update the timeout), or the key does not
      *         exist.
      */
-    @Override
-    public Long expire(final String bizkey, final String nameSpace, final int seconds) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.expire(key, seconds);
-            }
-        });
-    }
+
+    public Long expire(final String bizkey, final String nameSpace, final int seconds);
 
     /**
      * EXPIREAT works exctly like {@link #expire(String, int) EXPIRE} but
@@ -264,8 +174,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see <ahref="http://code.google.com/p/redis/wiki/ExpireCommand">ExpireCommand</a>
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param unixTime
      *            UNIX timestamp
      * @return Integer reply, specifically: 1: the timeout was set. 0: the
@@ -274,15 +185,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *         2.1.3 will happily update the timeout), or the key does not
      *         exist.
      */
-    @Override
-    public Long expireAt(final String bizkey, final String nameSpace, final long unixTime) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.expireAt(key, unixTime);
-            }
-        });
-    }
+
+    public Long expireAt(final String bizkey, final String nameSpace, final long unixTime);
 
     /**
      * The TTL command returns the remaining time to live in seconds of a key
@@ -290,67 +194,50 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * capability allows a Redis client to check how many seconds a given key
      * will continue to be part of the dataset.
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Integer reply, returns the remaining time to live in seconds of a
      *         key that has an EXPIRE. If the Key does not exists or does not
      *         have an associated expire, -1 is returned.
      */
-    @Override
-    public Long ttl(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.ttl(key);
-            }
-        });
-    }
+
+    public Long ttl(final String bizkey, final String nameSpace);
 
     /**
      * Sets or clears the bit at offset in the string value stored at key
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param offset
      *            offset
      * @param value
      *            string value
      * @return result
      */
-    @Override
-    public Boolean setbit(final String bizkey, final String nameSpace, final long offset, final boolean value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.setbit(key, offset, value);
-            }
-        });
-    }
+
+    public Boolean setbit(final String bizkey, final String nameSpace, final long offset, final boolean value);
 
     /**
      * Sets or clears the bit at offset in the string value stored at key
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param offset
      *            offset
      * @return result
      */
-    @Override
-    public Boolean getbit(final String bizkey, final String nameSpace, final long offset) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.getbit(key, offset);
-            }
-        });
-    }
+
+    public Boolean getbit(final String bizkey, final String nameSpace, final long offset);
 
     /**
      * setrange
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param offset
      *            offset
      * @param value
@@ -358,21 +245,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return result
      * 
      */
-    @Override
-    public Long setrange(final String bizkey, final String nameSpace, final long offset, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.setrange(key, offset, value);
-            }
-        });
-    }
+
+    public Long setrange(final String bizkey, final String nameSpace, final long offset, final String value);
 
     /**
      * setrange
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param startOffset
      *            start offset
      * @param endOffset
@@ -380,15 +261,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return result
      * 
      */
-    @Override
-    public String getrange(final String bizkey, final String nameSpace, final long startOffset, final long endOffset) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.getrange(key, startOffset, endOffset);
-            }
-        });
-    }
+
+    public String getrange(final String bizkey, final String nameSpace, final long startOffset, final long endOffset);
 
     /**
      * GETSET is an atomic set this value and return the old value command. Set
@@ -397,21 +271,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param value
      *            the old value
      * @return Bulk reply
      */
-    @Override
-    public String getSet(final String bizkey, final String nameSpace, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.getSet(key, value);
-            }
-        });
-    }
+
+    public String getSet(final String bizkey, final String nameSpace, final String value);
 
     /**
      * SETNX works exactly like {@link #set(String, String) SET} with the only
@@ -420,22 +288,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param value
      *            value
      * @return Integer reply, specifically: 1 if the key was set 0 if the key
      *         was not set
      */
-    @Override
-    public Long setnx(final String bizkey, final String nameSpace, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.setnx(key, value);
-            }
-        });
-    }
+
+    public Long setnx(final String bizkey, final String nameSpace, final String value);
 
     /**
      * Get the value of the specified key. If the key does not exist the special
@@ -444,23 +306,36 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
+     * @param seconds
+     *            timeout seconds
+     * @param <T>
+     *            value
+     * @return Bulk reply
+     */
+
+    public <T> String setex(final String bizkey, final String nameSpace, final int seconds, final T value);
+
+    /**
+     * Get the value of the specified key. If the key does not exist the special
+     * value 'nil' is returned. If the value stored at key is not a string an
+     * error is returned because GET can only handle string values.
+     * <p>
+     * Time complexity: O(1)
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param seconds
      *            timeout seconds
      * @param value
      *            value
      * @return Bulk reply
      */
-    @Override
-    public String setex(final String bizkey, final String nameSpace, final int seconds, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.setex(key, seconds, value);
-            }
-        });
-    }
+
+    public String setex(final String bizkey, final String nameSpace, final int seconds, final String value);
 
     /**
      * IDECRBY work just like {@link #decr(String) INCR} but instead to
@@ -479,22 +354,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #decr(String)
      * @see #incrBy(String, int)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param integer
      *            integer value
      * @return Integer reply, this commands will reply with the new value of key
      *         after the increment.
      */
-    @Override
-    public Long decrBy(final String bizkey, final String nameSpace, final long integer) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.decrBy(key, integer);
-            }
-        });
-    }
+
+    public Long decrBy(final String bizkey, final String nameSpace, final long integer);
 
     /**
      * Decrement the number stored at key by one. If the key does not exist or
@@ -514,20 +383,14 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #incrBy(String, int)
      * @see #decrBy(String, int)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Integer reply, this commands will reply with the new value of key
      *         after the increment.
      */
-    @Override
-    public Long decr(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.decr(key);
-            }
-        });
-    }
+
+    public Long decr(final String bizkey, final String nameSpace);
 
     /**
      * INCRBY work just like {@link #incr(String) INCR} but instead to increment
@@ -546,22 +409,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #decr(String)
      * @see #decrBy(String, int)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param integer
      *            integer
      * @return Integer reply, this commands will reply with the new value of key
      *         after the increment.
      */
-    @Override
-    public Long incrBy(final String bizkey, final String nameSpace, final long integer) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.incrBy(key, integer);
-            }
-        });
-    }
+
+    public Long incrBy(final String bizkey, final String nameSpace, final long integer);
 
     /**
      * Increment the number stored at key by one. If the key does not exist or
@@ -581,20 +438,14 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #decr(String)
      * @see #decrBy(String, int)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Integer reply, this commands will reply with the new value of key
      *         after the increment.
      */
-    @Override
-    public Long incr(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.incr(key);
-            }
-        });
-    }
+
+    public Long incr(final String bizkey, final String nameSpace);
 
     /**
      * Return a subset of the string from offset start to offset end (both
@@ -609,23 +460,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * total length of the requested range). Note that the lookup part of this
      * command is O(1) so for small strings this is actually an O(1) command.
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            start
      * @param end
      *            end
      * @return Bulk reply
      */
-    @Override
-    public String substr(final String bizkey, final String nameSpace, final int start, final int end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.substr(key, start, end);
-            }
-        });
-    }
+
+    public String substr(final String bizkey, final String nameSpace, final int start, final int end);
 
     /**
      * 
@@ -635,8 +480,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            hash field
      * @param value
@@ -645,15 +491,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *         of the value, 0 is returned, otherwise if a new field is created
      *         1 is returned.
      */
-    @Override
-    public Long hset(final String bizkey, final String nameSpace, final String field, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.hset(key, field, value);
-            }
-        });
-    }
+
+    public Long hset(final String bizkey, final String nameSpace, final String field, final String value);
 
     /**
      * If key holds a hash, retrieve the value associated to the specified
@@ -664,39 +503,25 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            hash field
      * @return Bulk reply
      */
-    @Override
+
     public String hget(final String bizkey, final String nameSpace, final String field,
-            final GetDataCallBack<String> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                String res = jedis.hget(key, field);
-                if (StringUtils.isEmpty(res)) {
-                    if (null != gbs) {
-                        res = gbs.invoke();
-                        if (StringUtils.isNotEmpty(res)) {
-                            hset(bizkey, nameSpace, field, res);
-                        }
-                    }
-                }
-                return res;
-            }
-        });
-    }
+            final GetDataCallBack<String> gbs);
 
     /**
      * 
      * Set the specified hash field to the specified value if the field not
      * exists. <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            hash field
      * @param value
@@ -704,15 +529,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return If the field already exists, 0 is returned, otherwise if a new
      *         field is created 1 is returned.
      */
-    @Override
-    public Long hsetnx(final String bizkey, final String nameSpace, final String field, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.hsetnx(key, field, value);
-            }
-        });
-    }
+
+    public Long hsetnx(final String bizkey, final String nameSpace, final String field, final String value);
 
     /**
      * Set the respective fields to the respective values. HMSET replaces old
@@ -722,21 +540,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(N) (with N being the number of fields)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param hash
      *            hash
      * @return Return OK or Exception if hash is empty
      */
-    @Override
-    public String hmset(final String bizkey, final String nameSpace, final Map<String, String> hash) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.hmset(key, hash);
-            }
-        });
-    }
+
+    public String hmset(final String bizkey, final String nameSpace, final Map<String, String> hash);
 
     /**
      * Retrieve the values associated to the specified fields.
@@ -746,22 +558,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(N) (with N being the number of fields)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param fields
      *            specified fields
      * @return Multi Bulk Reply specifically a list of all the values associated
      *         with the specified fields, in the same order of the request.
      */
-    @Override
-    public List<String> hmget(final String bizkey, final String nameSpace, final String... fields) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.hmget(key, fields);
-            }
-        });
-    }
+
+    public List<String> hmget(final String bizkey, final String nameSpace, final String... fields);
 
     /**
      * Increment the number stored at field in the hash at key by value. If key
@@ -775,8 +581,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            specified key
      * @param value
@@ -784,246 +591,173 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Integer reply The new value at field after the increment
      *         operation.
      */
-    @Override
-    public Long hincrBy(final String bizkey, final String nameSpace, final String field, final long value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.hincrBy(key, field, value);
-            }
-        });
-    }
+
+    public Long hincrBy(final String bizkey, final String nameSpace, final String field, final long value);
 
     /**
      * Test for existence of a specified field in a hash.
      * 
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            specified key
      * @return Return 1 if the hash stored at key contains the specified field.
      *         Return 0 if the key is not found or the field is not present.
      */
-    @Override
-    public Boolean hexists(final String bizkey, final String nameSpace, final String field) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.hexists(key, field);
-            }
-        });
-    }
+
+    public Boolean hexists(final String bizkey, final String nameSpace, final String field);
 
     /**
      * Remove the specified field from an hash stored at key.
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param field
      *            specified field
      * @return If the field was present in the hash it is deleted and 1 is
      *         returned, otherwise 0 is returned and no operation is performed.
      */
-    @Override
-    public Long hdel(final String bizkey, final String nameSpace, final String... field) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.hdel(key, field);
-            }
-        });
-    }
+
+    public Long hdel(final String bizkey, final String nameSpace, final String... field);
 
     /**
      * Return the number of items in a hash.
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return The number of entries (fields) contained in the hash stored at
      *         key. If the specified key does not exist, 0 is returned assuming
      *         an empty hash.
      */
-    @Override
-    public Long hlen(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.hlen(key);
-            }
-        });
-    }
+
+    public Long hlen(final String bizkey, final String nameSpace);
 
     /**
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return result
      */
-    @Override
-    public Set<String> hkeys(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.hkeys(key);
-            }
-        });
-    }
+
+    public Set<String> hkeys(final String bizkey, final String nameSpace);
 
     /**
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return result
      */
-    @Override
-    public List<String> hvals(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.hvals(key);
-            }
-        });
-    }
+
+    public List<String> hvals(final String bizkey, final String nameSpace);
 
     /**
-     * @param key
+     * @param <T>
+     * @param bizkey
      *            specified key
+     * @param nameSpace
+     * @param type
      * @return result
      */
-    @Override
-    public Map<String, String> hgetAll(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Map<String, String>>() {
-            public Map<String, String> invoke(Jedis jedis) {
-                return jedis.hgetAll(key);
-            }
-        });
-    }
 
-    /*
-     * {@inheritDoc}
-     * 
-     * @Override public Long rpush(final String bizkey,final String nameSpace,
-     * final String value) { return this.performFunction(key, new
-     * CallBack<Long>() { public Long invoke(Jedis jedis) { return
-     * jedis.rpush(key, value); } }); }
-     * 
-     * 存入值
-     * 
-     * @param key 键
-     * 
-     * @param value 值
-     * 
-     * @return 存入值
-     * 
-     * @Override public Long lpush(final String bizkey,final String nameSpace,
-     * final String value) { return this.performFunction(key, new
-     * CallBack<Long>() { public Long invoke(Jedis jedis) { return
-     * jedis.lpush(key, value); } }); }
+    public <T> List<T> hvalsObject(final String bizkey, final String nameSpace, TypeReference<T> type);
+
+    /**
+     * @param <T>
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param type
+     * @return result
      */
+
+    public <T> List<T> hvalsObject(final String bizkey, final String nameSpace, Class<T> type);
+
+    /**
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @return result
+     */
+
+    public Map<String, String> hgetAll(final String bizkey, final String nameSpace);
 
     /**
      * 获取长度
      * 
-     * @param key
-     *            键
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @return 长度
      */
-    @Override
-    public Long llen(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.llen(key);
-            }
-        });
-    }
+
+    public Long llen(final String bizkey, final String nameSpace);
 
     /**
      * 根据键值，起始位置获取结果列表
      * 
-     * @param key
-     *            键值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param start
      *            开始位置
      * @param end
      *            结束为止
      * @return 结果列表
      */
-    @Override
-    public List<String> lrange(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.lrange(key, start, end);
-            }
-        });
-    }
+
+    public List<String> lrange(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * 根据键值，起始位置trim字符串
      * 
-     * @param key
-     *            键值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param start
      *            开始位置
      * @param end
      *            结束位置
      * @return trim后的字符串
      */
-    @Override
-    public String ltrim(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.ltrim(key, start, end);
-            }
-        });
-    }
+
+    public String ltrim(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * 获取指定索引的字符串
      * 
-     * @param key
-     *            键值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param index
      *            索引
      * @return 指定索引的字符串
      */
-    @Override
-    public String lindex(final String bizkey, final String nameSpace, final long index) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.lindex(key, index);
-            }
-        });
-    }
+
+    public String lindex(final String bizkey, final String nameSpace, final long index);
 
     /**
      * 设置指定索引值
      * 
-     * @param key
-     *            键值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param index
      *            索引
      * @param value
      *            值
      * @return result
      */
-    @Override
-    public String lset(final String bizkey, final String nameSpace, final long index, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.lset(key, index, value);
-            }
-        });
-    }
+
+    public String lset(final String bizkey, final String nameSpace, final long index, final String value);
 
     /**
      * Remove the first count occurrences of the value element from the list. If
@@ -1038,8 +772,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity: O(N) (with N being the length of the list)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param count
      *            removed counts
      * @param value
@@ -1047,15 +782,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Integer Reply, specifically: The number of removed elements if
      *         the operation succeeded
      */
-    @Override
-    public Long lrem(final String bizkey, final String nameSpace, final long count, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.lrem(key, count, value);
-            }
-        });
-    }
+
+    public Long lrem(final String bizkey, final String nameSpace, final long count, final String value);
 
     /**
      * Atomically return and remove the first (LPOP) or last (RPOP) element of
@@ -1067,19 +795,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see #rpop(String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public String lpop(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.lpop(key);
-            }
-        });
-    }
+
+    public String lpop(final String bizkey, final String nameSpace);
 
     /**
      * Atomically return and remove the first (LPOP) or last (RPOP) element of
@@ -1091,19 +813,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see #lpop(String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public String rpop(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.rpop(key);
-            }
-        });
-    }
+
+    public String rpop(final String bizkey, final String nameSpace);
 
     /**
      * Add the specified member to the set value stored at key. If member is
@@ -1113,22 +829,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply, specifically: 1 if the new element was added 0 if
      *         the element was already a member of the set
      */
-    @Override
-    public Long sadd(final String bizkey, final String nameSpace, final String... member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.sadd(key, member);
-            }
-        });
-    }
+
+    public Long sadd(final String bizkey, final String nameSpace, final String... member);
 
     /**
      * Return all the members (elements) of the set value stored at key. This is
@@ -1136,19 +846,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(N)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Multi bulk reply
      */
-    @Override
-    public Set<String> smembers(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.smembers(key);
-            }
-        });
-    }
+
+    public Set<String> smembers(final String bizkey, final String nameSpace);
 
     /**
      * Remove the specified member from the set value stored at key. If member
@@ -1157,22 +861,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply, specifically: 1 if the new element was removed 0
      *         if the new element was not a member of the set
      */
-    @Override
-    public Long srem(final String bizkey, final String nameSpace, final String... member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.srem(key, member);
-            }
-        });
-    }
+
+    public Long srem(final String bizkey, final String nameSpace, final String... member);
 
     /**
      * Remove a random element from a Set returning it as return value. If the
@@ -1183,19 +881,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public String spop(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.spop(key);
-            }
-        });
-    }
+
+    public String spop(final String bizkey, final String nameSpace);
 
     /**
      * Remove a random element from a Set returning it as return value. If the
@@ -1206,19 +898,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public Long scard(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.scard(key);
-            }
-        });
-    }
+
+    public Long scard(final String bizkey, final String nameSpace);
 
     /**
      * Return 1 if member is a member of the set stored at key, otherwise 0 is
@@ -1226,23 +912,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply, specifically: 1 if the element is a member of the
      *         set 0 if the element is not a member of the set OR if the key
      *         does not exist
      */
-    @Override
-    public Boolean sismember(final String bizkey, final String nameSpace, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.sismember(key, member);
-            }
-        });
-    }
+
+    public Boolean sismember(final String bizkey, final String nameSpace, final String member);
 
     /**
      * Return a random element from a Set, without removing the element. If the
@@ -1253,19 +933,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Bulk reply
      */
-    @Override
-    public String srandmember(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.srandmember(key);
-            }
-        });
-    }
+
+    public String srandmember(final String bizkey, final String nameSpace);
 
     /**
      * Return a random element from a Set, without removing the element. If the
@@ -1276,19 +950,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
+     * @parm count
      * @return Bulk reply
      */
-    @Override
-    public List<String> srandmember(final String bizkey, final String nameSpace, final int count) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.srandmember(key, count);
-            }
-        });
-    }
+    public List<String> srandmember(String bizkey, String nameSpace, int count);
 
     /**
      * Add the specified member having the specifeid score to the sorted set
@@ -1304,8 +972,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * Time complexity O(log(N)) with N being the number of elements in the
      * sorted set
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param score
      *            specifeid score
      * @param member
@@ -1314,34 +983,21 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *         the element was already a member of the sorted set and the score
      *         was updated
      */
-    @Override
-    public Long zadd(final String bizkey, final String nameSpace, final double score, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zadd(key, score, member);
-            }
-        });
-    }
+
+    public Long zadd(final String bizkey, final String nameSpace, final double score, final String member);
 
     /**
-     * @param key
-     *            specefied key
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param start
      *            specified start member
      * @param end
      *            specified end member
      * @return result
      */
-    @Override
-    public Set<String> zrange(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrange(key, start, end);
-            }
-        });
-    }
+
+    public Set<String> zrange(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * Remove the specified member from the sorted set value stored at key. If
@@ -1353,22 +1009,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * 
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply, specifically: 1 if the new element was removed 0
      *         if the new element was not a member of the set
      */
-    @Override
-    public Long zrem(final String bizkey, final String nameSpace, final String... member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zrem(key, member);
-            }
-        });
-    }
+
+    public Long zrem(final String bizkey, final String nameSpace, final String... member);
 
     /**
      * If member already exists in the sorted set adds the increment to its
@@ -1389,23 +1039,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * Time complexity O(log(N)) with N being the number of elements in the
      * sorted set
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param score
      *            specified score
      * @param member
      *            specified member
      * @return The new score
      */
-    @Override
-    public Double zincrby(final String bizkey, final String nameSpace, final double score, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Double>() {
-            public Double invoke(Jedis jedis) {
-                return jedis.zincrby(key, score, member);
-            }
-        });
-    }
+
+    public Double zincrby(final String bizkey, final String nameSpace, final double score, final String member);
 
     /**
      * Return the rank (or index) or member in the sorted set at key, with
@@ -1421,23 +1065,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see #zrevrank(String, String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply or a nil bulk reply, specifically: the rank of the
      *         element as an integer reply if the element exists. A nil bulk
      *         reply if there is no such element.
      */
-    @Override
-    public Long zrank(final String bizkey, final String nameSpace, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zrank(key, member);
-            }
-        });
-    }
+
+    public Long zrank(final String bizkey, final String nameSpace, final String member);
 
     /**
      * Return the rank (or index) or member in the sorted set at key, with
@@ -1453,29 +1091,24 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see #zrank(String, String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return Integer reply or a nil bulk reply, specifically: the rank of the
      *         element as an integer reply if the element exists. A nil bulk
      *         reply if there is no such element.
      */
-    @Override
-    public Long zrevrank(final String bizkey, final String nameSpace, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zrevrank(key, member);
-            }
-        });
-    }
+
+    public Long zrevrank(final String bizkey, final String nameSpace, final String member);
 
     /**
      * zrevrange
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            specified start member
      * @param end
@@ -1483,21 +1116,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         range.
      */
-    @Override
-    public Set<String> zrevrange(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrevrange(key, start, end);
-            }
-        });
-    }
+
+    public Set<String> zrevrange(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * zrangeWithScores
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            specified member
      * @param end
@@ -1505,21 +1132,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         range.
      */
-    @Override
-    public Set<Tuple> zrangeWithScores(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrangeWithScores(key, start, end);
-            }
-        });
-    }
+
+    public Set<Tuple> zrangeWithScores(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * zrevrangeWithScores
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            specified member
      * @param end
@@ -1527,15 +1148,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         range.
      */
-    @Override
-    public Set<Tuple> zrevrangeWithScores(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrevrangeWithScores(key, start, end);
-            }
-        });
-    }
+
+    public Set<Tuple> zrevrangeWithScores(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * Return the sorted set cardinality (number of elements). If the key does
@@ -1543,19 +1157,13 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * Time complexity O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return the cardinality (number of elements) of the set as an integer.
      */
-    @Override
-    public Long zcard(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zcard(key);
-            }
-        });
-    }
+
+    public Long zcard(final String bizkey, final String nameSpace);
 
     /**
      * Return the score of the specified element of the sorted set at key. If
@@ -1564,21 +1172,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * <p>
      * <b>Time complexity:</b> O(1)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param member
      *            specified member
      * @return the score
      */
-    @Override
-    public Double zscore(final String bizkey, final String nameSpace, final String member) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Double>() {
-            public Double invoke(Jedis jedis) {
-                return jedis.zscore(key, member);
-            }
-        });
-    }
+
+    public Double zscore(final String bizkey, final String nameSpace, final String member);
 
     /**
      * Sort a Set or a List.
@@ -1592,21 +1194,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #sort(String, SortingParams, String)
      * 
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @return Assuming the Set/List at key contains a list of numbers, the
      *         return value will be the list of numbers ordered from the
      *         smallest to the biggest number.
      */
-    @Override
-    public List<String> sort(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.sort(key);
-            }
-        });
-    }
+
+    public List<String> sort(final String bizkey, final String nameSpace);
 
     /**
      * Sort a Set or a List accordingly to the specified parameters.
@@ -1680,21 +1276,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #sort(String)
      * @see #sort(String, SortingParams, String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param sortingParameters
      *            sortingParameters
      * @return a list of sorted elements.
      */
-    @Override
-    public List<String> sort(final String bizkey, final String nameSpace, final SortingParams sortingParameters) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.sort(key, sortingParameters);
-            }
-        });
-    }
+
+    public List<String> sort(final String bizkey, final String nameSpace, final SortingParams sortingParameters);
 
     /**
      * zcount
@@ -1707,15 +1297,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *            max value
      * @return zount
      */
-    @Override
-    public Long zcount(final String bizkey, final String nameSpace, final double min, final double max) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zcount(key, min, max);
-            }
-        });
-    }
+
+    public Long zcount(final String bizkey, final String nameSpace, final double min, final double max);
 
     /**
      * Return the all the elements in the sorted set at key with a score between
@@ -1768,8 +1351,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #zrangeByScoreWithScores(String, double, double, int, int)
      * @see #zcount(String, double, double)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param min
      *            min value
      * @param max
@@ -1777,21 +1361,15 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
-    public Set<String> zrangeByScore(final String bizkey, final String nameSpace, final double min, final double max) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrangeByScore(key, min, max);
-            }
-        });
-    }
+
+    public Set<String> zrangeByScore(final String bizkey, final String nameSpace, final double min, final double max);
 
     /**
      * zrevrangeByScore
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param max
      *            max value
      * @param min
@@ -1799,15 +1377,8 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         range.
      */
-    @Override
-    public Set<String> zrevrangeByScore(final String bizkey, final String nameSpace, final double max, final double min) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrevrangeByScore(key, max, min);
-            }
-        });
-    }
+
+    public Set<String> zrevrangeByScore(final String bizkey, final String nameSpace, final double max, final double min);
 
     /**
      * Return the all the elements in the sorted set at key with a score between
@@ -1859,8 +1430,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #zrangeByScoreWithScores(String, double, double, int, int)
      * @see #zcount(String, double, double)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param min
      *            min value
      * @param max
@@ -1872,22 +1444,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
+
     public Set<String> zrangeByScore(final String bizkey, final String nameSpace, final double min, final double max,
-            final int offset, final int count) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrangeByScore(key, min, max, offset, count);
-            }
-        });
-    }
+            final int offset, final int count);
 
     /**
      * zrevrangeByScore
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param max
      *            max value
      * @param min
@@ -1899,16 +1465,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         range.
      */
-    @Override
+
     public Set<String> zrevrangeByScore(final String bizkey, final String nameSpace, final double max,
-            final double min, final int offset, final int count) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                return jedis.zrevrangeByScore(key, max, min, offset, count);
-            }
-        });
-    }
+            final double min, final int offset, final int count);
 
     /**
      * Remove all elements in the sorted set at key with rank between start and
@@ -1922,23 +1481,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * elements in the sorted set and M the number of elements removed by the
      * operation
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            start rank
      * @param end
      *            end rank
      * @return range
      */
-    @Override
-    public Long zremrangeByRank(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zremrangeByRank(key, start, end);
-            }
-        });
-    }
+
+    public Long zremrangeByRank(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * Remove all the elements in the sorted set at key with a score between min
@@ -1949,23 +1502,17 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * O(log(N))+O(M) with N being the number of elements in the sorted set and
      * M the number of elements removed by the operation
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param start
      *            start positon
      * @param end
      *            end positon
      * @return Integer reply, specifically the number of elements removed.
      */
-    @Override
-    public Long zremrangeByScore(final String bizkey, final String nameSpace, final double start, final double end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.zremrangeByScore(key, start, end);
-            }
-        });
-    }
+
+    public Long zremrangeByScore(final String bizkey, final String nameSpace, final double start, final double end);
 
     /**
      * Return the all the elements in the sorted set at key with a score between
@@ -2017,8 +1564,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #zrangeByScoreWithScores(String, double, double, int, int)
      * @see #zcount(String, double, double)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param min
      *            min value
      * @param max
@@ -2026,22 +1574,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
+
     public Set<Tuple> zrangeByScoreWithScores(final String bizkey, final String nameSpace, final double min,
-            final double max) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrangeByScoreWithScores(key, min, max);
-            }
-        });
-    }
+            final double max);
 
     /**
      * zrevrangeByScoreWithScores
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param max
      *            max value
      * @param min
@@ -2049,16 +1591,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
+
     public Set<Tuple> zrevrangeByScoreWithScores(final String bizkey, final String nameSpace, final double max,
-            final double min) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrevrangeByScoreWithScores(key, max, min);
-            }
-        });
-    }
+            final double min);
 
     /**
      * Return the all the elements in the sorted set at key with a score between
@@ -2110,8 +1645,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @see #zrangeByScoreWithScores(String, double, double, int, int)
      * @see #zcount(String, double, double)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param min
      *            min value
      * @param max
@@ -2123,22 +1659,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
+
     public Set<Tuple> zrangeByScoreWithScores(final String bizkey, final String nameSpace, final double min,
-            final double max, final int offset, final int count) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrangeByScoreWithScores(key, min, max, offset, count);
-            }
-        });
-    }
+            final double max, final int offset, final int count);
 
     /**
      * zrevrangeByScoreWithScores
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param max
      *            max value
      * @param min
@@ -2150,22 +1680,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * @return Multi bulk reply specifically a list of elements in the specified
      *         score range.
      */
-    @Override
+
     public Set<Tuple> zrevrangeByScoreWithScores(final String bizkey, final String nameSpace, final double max,
-            final double min, final int offset, final int count) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<Tuple>>() {
-            public Set<Tuple> invoke(Jedis jedis) {
-                return jedis.zrevrangeByScoreWithScores(key, max, min, offset, count);
-            }
-        });
-    }
+            final double min, final int offset, final int count);
 
     /**
      * linsert
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param where
      *            list position
      * @param pivot
@@ -2174,16 +1698,9 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *            value
      * @return result
      */
-    @Override
+
     public Long linsert(final String bizkey, final String nameSpace, final LIST_POSITION where, final String pivot,
-            final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.linsert(key, where, pivot, value);
-            }
-        });
-    }
+            final String value);
 
     /**
      * Remove the specified keys. If a given key does not exist no operation is
@@ -2191,19 +1708,29 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * Time complexity: O(1)
      * 
-     * @param key
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @return Integer reply, specifically: an integer greater than 0 if one or
      *         more keys were removed 0 if none of the specified key existed
      */
-    @Override
-    public Long del(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.del(key);
-            }
-        });
-    }
+
+    public Long del(final String bizkey, final String nameSpace);
+
+    /**
+     * Remove the specified keys. If a given key does not exist no operation is
+     * performed for this key. The command returns the number of keys removed.
+     * 
+     * Time complexity: O(1)
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @return Integer reply, specifically: an integer greater than 0 if one or
+     *         more keys were removed 0 if none of the specified key existed
+     */
+
+    public Long del(final String[] bizkey, final String nameSpace);
 
     /**
      * Add the string value to the head (LPUSH) or tail (RPUSH) of the list
@@ -2215,26 +1742,16 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see Jedis#rpush(String, String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param fields
      *            string fields
      * @return Integer reply, specifically, the number of elements inside the
      *         list after the push operation.
      */
-    @Override
-    public Long lpush(final String bizkey, final String nameSpace, final String... fields) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                long r = 0;
-                for (String field : fields) {
-                    r = r + jedis.lpush(key, field);
-                }
-                return r;
-            }
-        });
-    }
+
+    public Long lpush(final String bizkey, final String nameSpace, final String... fields);
 
     /**
      * Add the string value to the head (LPUSH) or tail (RPUSH) of the list
@@ -2246,26 +1763,40 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 
      * @see Jedis#lpush(String, String)
      * 
-     * @param key
+     * @param bizkey
      *            specified key
+     * @param nameSpace
      * @param fields
      *            string fields
      * @return Integer reply, specifically, the number of elements inside the
      *         list after the push operation.
      */
-    @Override
-    public Long rpush(final String bizkey, final String nameSpace, final String... fields) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                long r = 0;
-                for (String field : fields) {
-                    r = r + jedis.rpush(key, field);
-                }
-                return r;
-            }
-        });
-    }
+
+    public Long rpush(final String bizkey, final String nameSpace, final String... fields);
+
+    /**
+     * 功能描述： 批量set数据
+     * 
+     * @param keyValues
+     *            键值对
+     * @param nameSpace
+     *            命名空间
+     * 
+     * @return set成功与否的状态码
+     */
+    String mset(Map<String, String> keyValues, String nameSpace);
+
+    /**
+     * 功能描述： 批量获取数据
+     * 
+     * @param keys
+     *            指定的key
+     * @param nameSpace
+     *            命名空间
+     * 
+     * @return 数据集合
+     */
+    List<String> mget(String[] keys, String nameSpace);
 
     /**
      * 对 key 所储存的字符串值，设置或清除指定偏移量上的位(bit)。位的设置或清除取决于 value 参数，可以是 0 也可以是 1 。当 key
@@ -2273,40 +1804,28 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 保存在指定的偏移量上。当字符串值进行伸展时，空白位置以 0 填充。 offset 参数必须大于或等于 0 ，小于 2^32 (bit 映射被限制在
      * 512 MB 之内)。
      * 
-     * @param key
-     *            所储存的字符串值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param offset
      *            偏移量
      * @param value
      *            参数
      * @return 结果
      */
-    @Override
-    public Boolean setbit(final String bizkey, final String nameSpace, final long offset, final String value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Boolean>() {
-            public Boolean invoke(Jedis jedis) {
-                return jedis.setbit(key, offset, value);
-            }
-        });
-    }
+
+    public Boolean setbit(final String bizkey, final String nameSpace, final long offset, final String value);
 
     /**
      * 返回 key 所储存的字符串值的长度。当 key 储存的不是字符串值时，返回一个错误。
      * 
-     * @param key
-     *            所储存的字符串值
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @return 长度
      */
-    @Override
-    public Long strlen(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.strlen(key);
-            }
-        });
-    }
+
+    public Long strlen(final String bizkey, final String nameSpace);
 
     /**
      * 打印一个特定的信息 message ，测试时使用。
@@ -2315,31 +1834,18 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      *            特定的信息
      * @return message
      */
-    @Override
-    public String echo(final String string) {
-        return this.performFunction("", new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.echo(string);
-            }
-        });
-    }
+
+    public String echo(final String string);
 
     /**
      * 计算给定字符串中，被设置为 1 的比特位的数量。一般情况下，给定的整个字符串都会被进行计数，
      * 
-     * @param key
-     *            给定的字符串
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @return 比特位的数量
      */
-    @Override
-    public Long bitcount(final String bizkey, final String nameSpace) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.bitcount(key);
-            }
-        });
-    }
+    public Long bitcount(final String bizkey, final String nameSpace);
 
     /**
      * 计算给定字符串中，被设置为 1 的比特位的数量。一般情况下，给定的整个字符串都会被进行计数，通过指定额外的 start 或 end
@@ -2347,347 +1853,171 @@ public class RedisClientImpl extends DefaultClientImpl implements IRedisClient {
      * 表示最后一个位，而 -2 表示倒数第二个位，以此类推。 不存在的 key 被当成是空字符串来处理，因此对一个不存在的 key 进行
      * BITCOUNT 操作，结果为 0 。
      * 
-     * @param key
-     *            给定的字符串
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param start
      *            开始位置
      * @param end
      *            结束位置
      * @return 比特位的数量
      */
-    @Override
-    public Long bitcount(final String bizkey, final String nameSpace, final long start, final long end) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.bitcount(key, start, end);
-            }
-        });
-    }
+    public Long bitcount(final String bizkey, final String nameSpace, final long start, final long end);
 
     /**
      * 根据key和集合类型设置缓存对象
      * 
-     * @param key
-     *            键
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param value
      *            值
      * @param <T>
      *            泛型对象
+     * @param time
+     *            seconds
      */
-    @Override
-    public <T> String set(final String bizkey, final String nameSpace, final T value, final int time) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return set(bizkey, nameSpace, CacheUtils.toJSONString(key, value), time);
-    }
-
-    /**
-     * 根据key和集合类型设置缓存对象
-     * 
-     * @param key
-     *            键
-     * @param value
-     *            值
-     * @param <T>
-     *            泛型对象
-     */
-    @Override
-    public <T> String setex(final String bizkey, final String nameSpace, final int time, final T value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return setex(bizkey, nameSpace, time, CacheUtils.toJSONString(key, value));
-    }
+    public <T> String set(final String bizkey, final String nameSpace, final T value, final int time);
 
     /**
      * 根据key和类的类别获取缓存对象
      * 
-     * @param key
-     *            键
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
      * @param value
      *            值
      * @param <T>
      *            泛型对象
-     * @return json字符串
+     * @return <T> 泛型对象
      */
-    @Override
-    public <T> T get(final String bizkey, final String nameSpace, Class<T> value, final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        String res = get(bizkey, nameSpace, null);
-        T rtn = null;
-        if (StringUtils.isNotEmpty(res)) {
-            rtn = CacheUtils.parseObject(key, res, value);
-        } else {
-            if (gbs != null) {
-                rtn = gbs.invoke();
-                // 取出的数据要set回去
-                if (null != rtn) {
-                    set(bizkey, nameSpace, rtn, gbs.getExpiredTime());
-                }
-            }
-        }
-        return rtn;
-    }
+    public <T> T get(final String bizkey, final String nameSpace, Class<T> value, final GetDataCallBack<T> gbs);
 
-    @Override
-    public <T> T get(final String bizkey, final String nameSpace, TypeReference<T> type, final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        String res = get(bizkey, nameSpace, null);
-        T rtn = null;
-        if (StringUtils.isNotEmpty(res)) {
-            rtn = CacheUtils.parseObject(key, res, type);
-        } else {
-            if (gbs != null) {
-                rtn = gbs.invoke();
-                // 取出的数据要set回去
-                if (null != rtn) {
-                    set(bizkey, nameSpace, rtn, gbs.getExpiredTime());
-                }
-            }
-        }
-        return rtn;
-    }
+    /**
+     * 根据key和类的类别获取缓存对象
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param value
+     *            值
+     * @param TypeReference
+     *            <T>
+     * @return <T> 泛型对象
+     */
+    public <T> T get(final String bizkey, final String nameSpace, TypeReference<T> type, final GetDataCallBack<T> gbs);
 
-    @Override
-    public String mset(final Map<String, String> bizkeyValues, final String nameSpace) {
-        return this.performFunction("", new CallBack<String>() {
-            public String invoke(Jedis jedis) {
-                return jedis.mset(CacheUtils.smapToArray(bizkeyValues, nameSpace));
-            }
-        });
-    }
+    /**
+     * 使用方法同hset，增加序列化功能（使用JSON）
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param <T>
+     *            泛型对象
+     * @return If the field already exists, and the HSET just produced an update
+     *         of the value, 0 is returned, otherwise if a new field is created
+     *         1 is returned.
+     */
+    public <T> Long hsetObject(final String bizkey, final String nameSpace, final String field, final T value);
 
-    @Override
-    public List<String> mget(String[] bizkeys, String nameSpace) {
-        final String[] key = CacheUtils.getKeyByNamespace(bizkeys, nameSpace);
-        return this.performFunction("", new CallBack<List<String>>() {
-            public List<String> invoke(Jedis jedis) {
-                return jedis.mget(key);
-            }
-        });
-    }
-
-    @Override
-    public <T> Long hsetObject(String bizkey, String nameSpace, String field, T value) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return hset(bizkey, nameSpace, field, CacheUtils.toJSONString(key, value));
-    }
-
-    @Override
+    /**
+     * 使用方法同hget
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param <T>
+     *            泛型对象
+     * @return <T> 泛型对象
+     */
     public <T> T hgetObject(final String bizkey, final String nameSpace, final String field, Class<T> value,
-            final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        String res = hget(bizkey, nameSpace, field, null);
-        T rtn = null;
-        if (StringUtils.isNotEmpty(res)) {
-            rtn = CacheUtils.parseObject(key, res, value);
-        } else {
-            if (gbs != null) {
-                rtn = gbs.invoke();
-            }
-            if (null != rtn) {
-                hsetObject(bizkey, nameSpace, field, rtn);
-            }
-        }
-        return rtn;
-    }
+            final GetDataCallBack<T> gbs);
 
-    @Override
+    /**
+     * 使用方法同hget
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param TypeReference
+     *            <T> type
+     * @return <T> 泛型对象
+     */
     public <T> T hgetObject(final String bizkey, final String nameSpace, final String field, TypeReference<T> type,
-            final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        String res = hget(bizkey, nameSpace, field, null);
-        T rtn = null;
-        if (StringUtils.isNotEmpty(res)) {
-            rtn = CacheUtils.parseObject(key, res, type);
-        } else {
-            if (gbs != null) {
-                rtn = gbs.invoke();
-            }
-            if (null != rtn) {
-                hsetObject(bizkey, nameSpace, field, rtn);
-            }
-        }
-        return rtn;
-    }
+            final GetDataCallBack<T> gbs);
 
-    @Override
-    public void hdelObject(String bizkey, String nameSpace, String... field) {
-        hdel(bizkey, nameSpace, field);
-    }
+    /**
+     * 使用方法同hdel
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param <T>
+     *            泛型对象
+     */
+    public void hdelObject(final String bizkey, final String nameSpace, final String... field);
 
-    @Override
-    public <T> Map<String, T> hgetAllObjects(final String bizkey, final String nameSpace, final TypeReference<T> type,
-            final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Map<String, T>>() {
-            public Map<String, T> invoke(Jedis jedis) {
-                try {
-                    Map<String, String> all = jedis.hgetAll(key);
-                    Map<String, T> allObjs = new HashMap<String, T>();
-                    for (Entry<String, String> item : all.entrySet()) {
-                        String _key = item.getKey();
-                        T _value = CacheUtils.parseObject(key, item.getValue(), type);
-                        allObjs.put(_key, _value);
-                    }
-                    return allObjs;
-                } catch (Exception e) {
-                    logger.error("key:" + key + "hgetAllObjects Exception：" + e.getMessage());
-                }
-                return null;
-            }
-        });
-    }
+    /**
+     * 使用方法同hgetAll
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param <T>
+     *            泛型对象
+     */
+    public <T> Map<String, T> hgetAllObjects(final String bizkey, final String nameSpace, Class<T> value,
+            final GetDataCallBack<T> gbs);
 
-    @Override
-    public <T> Map<String, T> hgetAllObjects(final String bizkey, final String nameSpace, final Class<T> value,
-            final GetDataCallBack<T> gbs) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Map<String, T>>() {
-            public Map<String, T> invoke(Jedis jedis) {
-                try {
-                    Map<String, String> all = jedis.hgetAll(key);
-                    Map<String, T> allObjs = new HashMap<String, T>();
-                    for (Entry<String, String> item : all.entrySet()) {
-                        String _key = item.getKey();
-                        T _value = CacheUtils.parseObject(key, item.getValue(), value);
-                        allObjs.put(_key, _value);
-                    }
-                    return allObjs;
-                } catch (Exception e) {
-                    logger.error("key:" + key + "hgetAllObjects Exception：" + e.getMessage());
-                }
-                return null;
-            }
-        });
-    }
+    /**
+     * 使用方法同hgetAll
+     * 
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @param filed
+     * @param TypeReference
+     *            <T> type
+     */
+    public <T> Map<String, T> hgetAllObjects(final String bizkey, final String nameSpace, TypeReference<T> type,
+            final GetDataCallBack<T> gbs);
 
-    @Override
-    public Long del(String[] bizkeys, String nameSpace) {
-        final String[] keys = CacheUtils.getKeyByNamespace(bizkeys, nameSpace);
-        return this.performFunction("", new CallBack<Long>() {
-            public Long invoke(Jedis jedis) {
-                return jedis.del(keys);
-            }
-        });
-    }
+    /**
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @Param cursor
+     * */
+    public List<Map.Entry<String, String>> hscan(final String bizkey, final String nameSpace, final String match);
 
-    @Override
-    public <T> List<T> hvalsObject(final String bizkey, final String nameSpace, final TypeReference<T> type) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        List<String> res = hvals(bizkey, nameSpace);
-        List<T> rtnList = null;
-        T rtn = null;
-        if (null != res && res.size() > 0) {
-            rtnList = new ArrayList<T>();
-            for (String tmp : res) {
-                rtn = CacheUtils.parseObject(key, tmp, type);
-                rtnList.add(rtn);
-            }
-        }
-        return rtnList;
-    }
+    /**
+     * @param bizkey
+     *            specified key
+     * @param nameSpace
+     * @Param cursor
+     * */
+    public Set<String> sscan(final String bizkey, final String nameSpace, final String match);
 
-    @Override
-    public <T> List<T> hvalsObject(String bizkey, String nameSpace, Class<T> type) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        List<String> res = hvals(bizkey, nameSpace);
-        List<T> rtnList = null;
-        T rtn = null;
-        if (null != res && res.size() > 0) {
-            rtnList = new ArrayList<T>();
-            for (String tmp : res) {
-                rtn = CacheUtils.parseObject(key, tmp, type);
-                rtnList.add(rtn);
-            }
-        }
-        return rtnList;
-    }
+    /**
+     * 按模式批量删除
+     * 
+     * @param script
+     * */
+    public Object patternDel(final String pattern, final String nameSpace);
 
-    @Override
-    public List<Map.Entry<String, String>> hscan(final String bizkey, final String nameSpace, final String match) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<List<Map.Entry<String, String>>>() {
-            public List<Map.Entry<String, String>> invoke(Jedis jedis) {
-                try {
-                    int cursor = 0;
-                    ScanParams scanParams = new ScanParams();
-                    scanParams.match(match);
-                    ScanResult<Map.Entry<String, String>> scanResult;
-                    List<Map.Entry<String, String>> res = new ArrayList<Map.Entry<String, String>>();
-                    do {
-                        scanResult = jedis.hscan(key, String.valueOf(cursor), scanParams);
-                        res.addAll(scanResult.getResult());
-                        cursor = Integer.parseInt(scanResult.getStringCursor());
-                    } while (cursor > 0);
-                    return res;
-                } catch (Exception ex) {
-                    logger.error("hscan key:" + key + ",match:" + match + ",error:", ex);
-                }
-                return null;
-            }
-        });
-    }
+    /**
+     * 部分支持eval，需要自己确保所有keys在同一服务器上
+     * */
+    public Object eval(final String script, final List<String> keys, final String nameSpace, final List<String> args);
 
-    @Override
-    public Set<String> sscan(final String bizkey, final String nameSpace, final String match) {
-        final String key = CacheUtils.getKeyByNamespace(bizkey, nameSpace);
-        return this.performFunction(key, new CallBack<Set<String>>() {
-            public Set<String> invoke(Jedis jedis) {
-                try {
-                    int cursor = 0;
-                    ScanParams scanParams = new ScanParams();
-                    scanParams.match(match);
-                    ScanResult<String> scanResult;
-                    Set<String> res = new HashSet<String>();
-                    do {
-                        scanResult = jedis.sscan(key, String.valueOf(cursor), scanParams);
-                        res.addAll(scanResult.getResult());
-                        cursor = Integer.parseInt(scanResult.getStringCursor());
-                    } while (cursor > 0);
-                    return res;
-                } catch (Exception ex) {
-                    logger.error("sscan key:" + key + ",match:" + match + ",error:", ex);
-                }
-                return null;
-            }
-        });
-    }
-
-    @Override
-    public Object patternDel(final String pattern, final String nameSpace) {
-        final String patternKey = CacheUtils.getKeyByNamespace(pattern, nameSpace);
-        // final String script =
-        // "return redis.call('del', unpack(redis.call('keys','"+patternKey+"')))";
-        final String script = "local keys = redis.call('keys', '"
-                + patternKey
-                + "') \n for i=1,#keys,2000 do \n redis.call('del', unpack(keys, i, math.min(i+1999, #keys))) \n end \n return keys";
-        return this.performFunction("", new CallBack<Object>() {
-            public Object invoke(Jedis jedis) {
-                try {
-                    return jedis.eval(script);
-                } catch (Exception e) {
-                    logger.error("patternDel:" + patternKey + " eval Exception：" + e.getMessage());
-                }
-                return null;
-            }
-        });
-    }
-
-    @Override
-    public Object eval(final String script, final List<String> bizkeys, final String nameSpace, final List<String> args) {
-        final List<String> keys = CacheUtils.getKeyByNamespace(bizkeys, nameSpace);
-        return this.performFunction("", new CallBack<Object>() {
-            public Object invoke(Jedis jedis) {
-                return jedis.eval(script, keys, args);
-            }
-        });
-    }
-
-    @Override
-    public Pipeline pipelined() {
-        return this.performFunction("", new CallBack<Pipeline>() {
-            public Pipeline invoke(Jedis jedis) {
-                return jedis.pipelined();
-            }
-        });
-    }
+    /**
+     * pipline模式
+     * */
+    public Pipeline pipelined();
 }

@@ -8,7 +8,7 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.pool;
+package io.github.ningyu.redis.pool;
 
 import java.util.HashSet;
 import java.util.Set;

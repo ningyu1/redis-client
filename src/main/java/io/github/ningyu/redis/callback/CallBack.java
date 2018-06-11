@@ -8,7 +8,7 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.callback;
+package io.github.ningyu.redis.callback;
 
 import redis.clients.jedis.Jedis;
 

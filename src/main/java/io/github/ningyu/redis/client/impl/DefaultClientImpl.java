@@ -8,7 +8,12 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client.impl;
+package io.github.ningyu.redis.client.impl;
+
+import io.github.ningyu.redis.callback.CallBack;
+import io.github.ningyu.redis.exception.RedisClientException;
+import io.github.ningyu.redis.pool.JedisSentinelPoolFactory;
+import io.github.ningyu.redis.util.CacheUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +25,6 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisSentinelPool;
 import redis.clients.jedis.exceptions.JedisException;
 import redis.clients.util.Pool;
-import cn.tsoft.framework.redis.callback.CallBack;
-import cn.tsoft.framework.redis.exception.RedisClientException;
-import cn.tsoft.framework.redis.pool.JedisSentinelPoolFactory;
 
 /**
  * 
@@ -31,7 +33,7 @@ import cn.tsoft.framework.redis.pool.JedisSentinelPoolFactory;
  */
 public class DefaultClientImpl implements InitializingBean, DisposableBean {
 
-private final Logger logger = LoggerFactory.getLogger(DefaultClientImpl.class.getName());
+	private final Logger logger = LoggerFactory.getLogger(DefaultClientImpl.class.getName());
     
     private Pool<Jedis> pool;
 
@@ -49,7 +51,11 @@ private final Logger logger = LoggerFactory.getLogger(DefaultClientImpl.class.ge
         this.jedisSentinelPoolFactory = jedisSentinelPoolFactory;
         createJedisSentinelPool();
     }
-    
+
+    public void setKeySeparator(String keySeparator) {
+        CacheUtils.setKeySeparator(keySeparator);
+    }
+
     public void createJedisSentinelPool() {
         this.jedisSentinelPool = this.jedisSentinelPoolFactory.create();
     }

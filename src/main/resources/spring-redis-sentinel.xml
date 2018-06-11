@@ -13,7 +13,7 @@
 	<context:component-scan base-package="io.github.ningyu.redis" />
 	
 	<bean id="redisClient" class="io.github.ningyu.redis.client.impl.RedisClientImpl">
-		<property name="jedisPool" ref="jedisPool" />
+		<property name="jedisSentinelPoolFactory" ref="jedisSentinelPoolFactory" />
 		<property name="keySeparator" value="${redis.keySeparator}" />
 	</bean>
 
@@ -24,13 +24,13 @@
 		<property name="testOnBorrow" value="${redis.pool.testOnBorrow}" />
 		<property name="testOnReturn" value="${redis.pool.testOnReturn}" />
 	</bean>
-
-	<bean id="jedisPool" class="redis.clients.jedis.JedisPool">
-		<constructor-arg index="0" ref="jedisPoolConfig" />
-		<constructor-arg index="1" value="${redis.ip}" />
-		<constructor-arg index="2" value="${redis.port}" />
-		<constructor-arg index="3" value="${redis.timeout}" />
-		<constructor-arg index="4" value="${redis.password}" />
+	
+	<bean id="jedisSentinelPoolFactory" class="io.github.ningyu.redis.pool.JedisSentinelPoolFactory">
+		<property name="poolConfig" ref="jedisPoolConfig" />
+		<property name="masterName" value="${redis.mastername}" />
+		<property name="sentinels" value="${redis.sentinels}" />
+		<property name="timeout" value="${redis.timeout}" />
+		<property name="password" value="${redis.password}" />
 	</bean>
 
 </beans>

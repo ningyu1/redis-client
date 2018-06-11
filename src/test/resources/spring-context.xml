@@ -9,7 +9,7 @@
    	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
    	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
 
-	<context:component-scan base-package="cn.tsoft.framework.redis" />
+	<context:component-scan base-package="io.github.ningyu.redis" />
 	<context:property-placeholder location="classpath:redis.properties"/>
 	<import resource="classpath:spring-redis-sentinel.xml" />
 <!-- 	<import resource="classpath:spring-redis.xml" /> -->

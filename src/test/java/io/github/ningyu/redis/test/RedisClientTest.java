@@ -8,7 +8,9 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.test;
+package io.github.ningyu.redis.test;
+
+import io.github.ningyu.redis.client.IRedisClient;
 
 import java.util.UUID;
 import java.util.Vector;
@@ -19,8 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Component;
-
-import cn.tsoft.framework.redis.client.IRedisClient;
 
 /**
  * <功能描述>

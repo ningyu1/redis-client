@@ -8,7 +8,9 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.util;
+package io.github.ningyu.redis.util;
+
+import io.github.ningyu.redis.exception.RedisClientException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -36,7 +38,6 @@ import redis.clients.util.SafeEncoder;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import cn.tsoft.framework.redis.exception.RedisClientException;
 
 /**
  * <功能描述>
@@ -51,12 +52,18 @@ public class CacheUtils {
      */
     private static Logger logger = LoggerFactory.getLogger(CacheUtils.class);
 
-    private static String DOT = ".";
+    private static String DOT = ":";
 
     /**
      * 5000 constant
      */
     private static final int FIVE = 5000;
+    
+    public static void setKeySeparator(String keySeparator) {
+        if (StringUtils.isNotBlank(keySeparator)) {
+            DOT = keySeparator;
+        }
+    }
 
     /**
      * 

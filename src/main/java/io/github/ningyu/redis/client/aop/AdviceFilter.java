@@ -8,7 +8,9 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client.aop;
+package io.github.ningyu.redis.client.aop;
+
+import io.github.ningyu.redis.util.CacheUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -17,8 +19,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
-import cn.tsoft.framework.redis.util.CacheUtils;
 
 @Component
 @Aspect

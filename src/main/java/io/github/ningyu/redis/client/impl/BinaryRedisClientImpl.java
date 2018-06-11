@@ -8,7 +8,11 @@
  * <author>      <time>      <version>    <desc>
  * 修改人姓名             修改时间            版本号                  描述
  */
-package cn.tsoft.framework.redis.client.impl;
+package io.github.ningyu.redis.client.impl;
+
+import io.github.ningyu.redis.callback.CallBack;
+import io.github.ningyu.redis.client.IBinaryRedisClient;
+import io.github.ningyu.redis.util.CacheUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -20,10 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import redis.clients.jedis.Jedis;
-
-import cn.tsoft.framework.redis.callback.CallBack;
-import cn.tsoft.framework.redis.client.IBinaryRedisClient;
-import cn.tsoft.framework.redis.util.CacheUtils;
 
 /**
  * <功能描述>
